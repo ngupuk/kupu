@@ -2,7 +2,8 @@
 
 Kupu is an open source AI inpainter to remove object(s) from images while keeping the original image dimension intact.
 
-<video src="kupu.mp4" controls> </video>
+
+[![Kupu](kupu.png)](https://youtu.be/mlLjOdKmzlg)
 
 ### Installation
 
