@@ -1,0 +1,15 @@
+# Requirements file for Docker builds and UV compatibility
+# This file is synchronized with pyproject.toml dependencies
+
+# Core dependencies
+numpy>=2.2.2
+pillow>=11.3.0
+torch>=2.4.0
+fastapi>=0.104.1
+uvicorn>=0.24.0
+psutil>=5.9.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+loguru>=0.7.3
+requests>=2.31.0
+huggingface_hub>=0.20.0
