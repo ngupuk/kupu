@@ -160,6 +160,41 @@ function Editor() {
     }
   }
 
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!image.data) return
+      e.preventDefault()
+      const startX = e.clientX
+      const startY = e.clientY
+      const initX = transform.x
+      const initY = transform.y
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const dx = moveEvent.clientX - startX
+        const dy = moveEvent.clientY - startY
+        setTransform((prev) => ({
+          ...prev,
+          x: initX + dx,
+          y: initY + dy,
+        }))
+      }
+
+      const handleMouseUp = () => {
+        window.removeEventListener("mousemove", handleMouseMove)
+        window.removeEventListener("mouseup", handleMouseUp)
+      }
+
+      window.addEventListener("mousemove", handleMouseMove)
+      window.addEventListener("mouseup", handleMouseUp)
+    }
+
+    canvas.addEventListener("mousedown", handleMouseDown)
+    return () => canvas.removeEventListener("mousedown", handleMouseDown)
+  }, [transform, image])
+
   return (
     <div className="flex-3 flex relative">
       <div className="flex-1">
