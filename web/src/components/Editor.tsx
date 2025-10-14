@@ -4,6 +4,7 @@ import {
   LuFocus,
   LuLasso,
   LuRedo,
+  LuRefreshCcw,
   LuUndo,
   LuUpload,
 } from "react-icons/lu"
@@ -11,6 +12,7 @@ import IconButton from "./IconButton"
 
 function Editor() {
   const ref = useRef<HTMLCanvasElement>(null)
+  const [isLassoActive, setIsLassoActive] = useState(false)
   const [image, setImage] = useState<{
     width: number
     height: number
@@ -22,6 +24,11 @@ function Editor() {
     y: 0,
     zoom: 1,
   })
+
+  const [lassos, setLassos] = useState<{ x: number; y: number }[][]>([])
+  const [redoHistory, setRedoHistory] = useState<{ x: number; y: number }[][]>(
+    []
+  )
 
   // ✅ Upload handler
   const uploadHandler = () => {
@@ -53,6 +60,7 @@ function Editor() {
             data: img.src,
           })
           setTransform({ x, y, zoom: fitZoom })
+          setLassos([])
         }
         img.src = event.target?.result as string
       }
@@ -80,8 +88,34 @@ function Editor() {
       ctx.scale(transform.zoom, transform.zoom)
       ctx.drawImage(img, 0, 0)
       ctx.restore()
+      // gambar lasso
+      const fillAlpha = 0.2
+      ctx.strokeStyle = "lime"
+      ctx.fillStyle = `rgba(0,255,0,${fillAlpha})`
+      ctx.lineWidth = 2
+      lassos.forEach((points) => {
+        if (points.length < 2) return
+
+        const imagePoint = (p: { x: number; y: number }) => {
+          return {
+            x: transform.x + p.x * transform.zoom,
+            y: transform.y + p.y * transform.zoom,
+          }
+        }
+
+        ctx.beginPath()
+        const start = imagePoint(points[0])
+        ctx.moveTo(start.x, start.y)
+        points.slice(1).forEach((p) => {
+          const pt = imagePoint(p)
+          ctx.lineTo(pt.x, pt.y)
+        })
+        ctx.closePath()
+        ctx.stroke()
+        ctx.fill()
+      })
     }
-  }, [image, transform])
+  }, [image, transform, lassos])
 
   // ✅ Resize canvas ke ukuran tampilan
   useEffect(() => {
@@ -172,19 +206,38 @@ function Editor() {
       const initX = transform.x
       const initY = transform.y
 
+      const getPointInImage = (clientX: number, clientY: number) => {
+        const rect = canvas.getBoundingClientRect()
+        const x = (clientX - rect.left - transform.x) / transform.zoom
+        const y = (clientY - rect.top - transform.y) / transform.zoom
+        return { x, y }
+      }
+      const points: { x: number; y: number }[] = []
+      if (isLassoActive) {
+        points.push(getPointInImage(e.clientX, e.clientY))
+      }
+
       const handleMouseMove = (moveEvent: MouseEvent) => {
         const dx = moveEvent.clientX - startX
         const dy = moveEvent.clientY - startY
-        setTransform((prev) => ({
-          ...prev,
-          x: initX + dx,
-          y: initY + dy,
-        }))
+        if (!isLassoActive)
+          setTransform((prev) => ({
+            ...prev,
+            x: initX + dx,
+            y: initY + dy,
+          }))
+        else {
+          points.push(getPointInImage(moveEvent.clientX, moveEvent.clientY))
+          setRedoHistory([]) // reset redo setiap kali gambar lasso baru
+        }
       }
 
       const handleMouseUp = () => {
         window.removeEventListener("mousemove", handleMouseMove)
         window.removeEventListener("mouseup", handleMouseUp)
+        if (isLassoActive && points.length > 2) {
+          setLassos((prev) => [...prev, points])
+        }
       }
 
       window.addEventListener("mousemove", handleMouseMove)
@@ -193,23 +246,52 @@ function Editor() {
 
     canvas.addEventListener("mousedown", handleMouseDown)
     return () => canvas.removeEventListener("mousedown", handleMouseDown)
-  }, [transform, image])
+  }, [transform, image, isLassoActive])
 
   return (
     <div className="flex-3 flex relative">
       <div className="flex-1">
         <canvas
           ref={ref}
-          className="w-full h-full bg-gray-700 cursor-crosshair"
+          className={`w-full h-full bg-gray-700 ${
+            isLassoActive ? "cursor-crosshair" : "cursor-move"
+          }`}
         />
         {/* toolbar kanan */}
       </div>
       <div className="flex flex-col gap-2 p-2 rounded-r-lg bg-gray-800">
         <IconButton icon={LuUpload} onClick={uploadHandler} />
-        <IconButton icon={LuLasso} />
+        <IconButton
+          icon={LuLasso}
+          onClick={() => {
+            isLassoActive ? setIsLassoActive(false) : setIsLassoActive(true)
+          }}
+          active={isLassoActive}
+        />
         <IconButton icon={LuFocus} onClick={handleFocus} />
-        <IconButton icon={LuUndo} />
-        <IconButton icon={LuRedo} />
+        <IconButton
+          icon={LuUndo}
+          onClick={() => {
+            const last = lassos[lassos.length - 1]
+            if (!last) return
+            setRedoHistory((prev) => [...prev, last])
+            setLassos((prev) => prev.slice(0, prev.length - 1))
+          }}
+        />
+        <IconButton
+          icon={LuRedo}
+          aria-disabled={redoHistory.length === 0}
+          className={
+            redoHistory.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+          }
+          onClick={() => {
+            const last = redoHistory[redoHistory.length - 1]
+            if (!last) return
+            setLassos((prev) => [...prev, last])
+            setRedoHistory((prev) => prev.slice(0, prev.length - 1))
+          }}
+        />
+        <IconButton icon={LuRefreshCcw} onClick={() => setLassos([])} />
         <IconButton icon={LuCircleHelp} />
       </div>
       {/* overlay kalau belum ada gambar */}
