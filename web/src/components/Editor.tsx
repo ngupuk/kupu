@@ -29,6 +29,7 @@ function Editor() {
   const [redoHistory, setRedoHistory] = useState<{ x: number; y: number }[][]>(
     []
   )
+  const [points, setPoints] = useState<{ x: number; y: number }[]>([])
 
   // ✅ Upload handler
   const uploadHandler = () => {
@@ -93,6 +94,7 @@ function Editor() {
       ctx.strokeStyle = "lime"
       ctx.fillStyle = `rgba(0,255,0,${fillAlpha})`
       ctx.lineWidth = 2
+
       lassos.forEach((points) => {
         if (points.length < 2) return
 
@@ -114,8 +116,32 @@ function Editor() {
         ctx.stroke()
         ctx.fill()
       })
+
+      // gambar current points kalau ada
+      if (points.length > 0) {
+        ctx.strokeStyle = "yellow"
+        ctx.fillStyle = `rgba(255,255,0,${fillAlpha})`
+        ctx.lineWidth = 2
+
+        const imagePoint = (p: { x: number; y: number }) => {
+          return {
+            x: transform.x + p.x * transform.zoom,
+            y: transform.y + p.y * transform.zoom,
+          }
+        }
+
+        ctx.beginPath()
+        const start = imagePoint(points[0])
+        ctx.moveTo(start.x, start.y)
+        points.slice(1).forEach((p) => {
+          const pt = imagePoint(p)
+          ctx.lineTo(pt.x, pt.y)
+        })
+        ctx.stroke()
+        ctx.fill()
+      }
     }
-  }, [image, transform, lassos])
+  }, [image, transform, lassos, points])
 
   // ✅ Resize canvas ke ukuran tampilan
   useEffect(() => {
@@ -215,6 +241,7 @@ function Editor() {
       const points: { x: number; y: number }[] = []
       if (isLassoActive) {
         points.push(getPointInImage(e.clientX, e.clientY))
+        setPoints(points)
       }
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -228,6 +255,7 @@ function Editor() {
           }))
         else {
           points.push(getPointInImage(moveEvent.clientX, moveEvent.clientY))
+          setPoints([...points])
           setRedoHistory([]) // reset redo setiap kali gambar lasso baru
         }
       }
@@ -237,6 +265,7 @@ function Editor() {
         window.removeEventListener("mouseup", handleMouseUp)
         if (isLassoActive && points.length > 2) {
           setLassos((prev) => [...prev, points])
+          setPoints([])
         }
       }
 
