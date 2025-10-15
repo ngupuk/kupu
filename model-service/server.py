@@ -339,7 +339,8 @@ async def inpaint(request: SimplifiedInpaintRequest):
 
 def setup_static_files():
     """Setup static file serving for production mode"""
-    react_build_path = current_dir.parent / "dashboard" / "dist"
+    react_build_path = current_dir.parent / "web" / "dist"
+    logger.info(f"Setting up static files from: {react_build_path}")
     if react_build_path.exists():
         # Remove the root endpoint if we're serving static files
         for route in app.routes:

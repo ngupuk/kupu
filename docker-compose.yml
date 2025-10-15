@@ -1,24 +1,8 @@
 version: "3.8"
 
 services:
-  web:
-    build:
-      context: ./web-kupu
-      dockerfile: Dockerfile.dev
+  app:
+    build: .
+    container_name: kupu_app
     ports:
-      - "3000:3000"
-    volumes:
-      - ./web-kupu:/rails
-    environment:
-      - RAILS_ENV=development
-
-  model-service:
-    build:
-      context: ./model-service
-      dockerfile: Dockerfile
-    ports:
-      - "8003:8003"
-    volumes:
-      - ./model-service:/app
-    environment:
-      - UV_CACHE_DIR=/tmp/uv-cache
+      - "8000:8003"

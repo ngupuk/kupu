@@ -13,14 +13,6 @@ jobs:
   build-and-push:
     runs-on: ubuntu-22.04
 
-    strategy:
-      matrix:
-        service:
-          - name: model
-            path: model-service
-          - name: web
-            path: web-kupu
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,11 +30,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push ${{ matrix.service.name }} image
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service.path }}
+          context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service.name }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           platforms: linux/amd64

@@ -46,7 +46,7 @@ export const ImageProcessorProvider = ({
     if (!image) return ""
     setProcessing(true)
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8003"
+    const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8003"
 
     const body = {
       image,
