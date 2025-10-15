@@ -5,7 +5,7 @@ COPY web/package.json web/package-lock.json ./
 RUN npm install
 
 COPY web/tsconfig.json web/vite.config.ts ./
-COPY web/src ./src
+COPY web ./
 
 ENV VITE_API_BASE_URL=""
 RUN npm run build
