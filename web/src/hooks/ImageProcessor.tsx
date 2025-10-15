@@ -5,7 +5,7 @@ type Context = {
   setImage: (img: string | null) => void
   mask: string | null
   setMask: (mask: string | null) => void
-  processing: boolean
+  isProcessing: boolean
   process: () => Promise<string>
 
   resultHistory: string[]
@@ -17,7 +17,7 @@ const ctx = createContext<Context>({
   setImage: () => {},
   mask: null,
   setMask: () => {},
-  processing: false,
+  isProcessing: false,
   process: async () => "",
 
   resultHistory: [],
@@ -56,7 +56,7 @@ export const ImageProcessorProvider = ({
         setImage,
         mask,
         setMask,
-        processing,
+        isProcessing: processing,
         process,
         resultHistory,
         removeFromHistory: (index: number) => {
