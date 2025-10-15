@@ -14,8 +14,8 @@ function IconButton({
 }: IconButtonProps) {
   return (
     <button
-      className={`bg-gray-600 hover:bg-indigo-500 flex items-center justify-center rounded-md cursor-pointer size-10 ${
-        active ? "bg-indigo-500" : ""
+      className={`bg-gray-600 hover:bg-gray-500 flex items-center justify-center rounded-md cursor-pointer size-10 ${
+        active ? "bg-indigo-500 hover:bg-indigo-500" : ""
       } ${className} 
       `}
       {...props}
