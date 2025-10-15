@@ -8,9 +8,11 @@ import {
   LuUndo,
   LuUpload,
 } from "react-icons/lu"
+import useImageProcessor from "../hooks/ImageProcessor"
 import IconButton from "./IconButton"
 
 function Editor() {
+  const { setImage: setProcessingImage, setMask } = useImageProcessor()
   const ref = useRef<HTMLCanvasElement>(null)
   const [isLassoActive, setIsLassoActive] = useState(false)
   const [image, setImage] = useState<{
@@ -60,6 +62,8 @@ function Editor() {
             height: img.height,
             data: img.src,
           })
+          setProcessingImage(img.src)
+          setMask(null)
           setTransform({ x, y, zoom: fitZoom })
           setLassos([])
         }
@@ -140,6 +144,30 @@ function Editor() {
         ctx.stroke()
         ctx.fill()
       }
+
+      // Create mask from lassos
+      const maskCanvas = document.createElement("canvas")
+      maskCanvas.width = image.width
+      maskCanvas.height = image.height
+      const maskCtx = maskCanvas.getContext("2d")
+      if (!maskCtx) return
+      maskCtx.fillStyle = "black"
+      maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height)
+      maskCtx.fillStyle = "white"
+
+      lassos.forEach((points) => {
+        if (points.length < 2) return
+        maskCtx.beginPath()
+        const start = points[0]
+        maskCtx.moveTo(start.x, start.y)
+        points.slice(1).forEach((p) => {
+          maskCtx.lineTo(p.x, p.y)
+        })
+        maskCtx.closePath()
+        maskCtx.fill()
+      })
+      const maskData = maskCanvas.toDataURL("image/png")
+      setMask(maskData)
     }
   }, [image, transform, lassos, points])
 

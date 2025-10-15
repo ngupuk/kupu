@@ -1,6 +1,8 @@
 import Editor from "./components/Editor"
+import useImageProcessor from "./hooks/ImageProcessor"
 
 function App() {
+  const { image, mask } = useImageProcessor()
   return (
     <div className="bg-gray-950 min-h-screen text-white flex flex-col">
       <h1 className="px-20 py-5 text-4xl">Kupu</h1>
@@ -13,6 +15,10 @@ function App() {
           <h2>Result History</h2>
           <div className="flex flex-col gap-4 mt-4">
             <div className="bg-gray-700 p-4 rounded-lg">History Item 1</div>
+            <div className="flex flex-col gap-2 bg-gray-500 p-2">
+              <div>{image && <img src={image} alt="" />}</div>
+              <div>{mask && <img src={mask} alt="" />}</div>
+            </div>
           </div>
         </div>
       </div>
