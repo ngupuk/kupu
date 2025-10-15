@@ -29,5 +29,5 @@ COPY model-service .
 COPY --from=web /app/dist ../web/dist
 EXPOSE 8003
 
-CMD ["uv", "run", "python3", "server.py", "--reload", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["uv", "run", "python3", "server.py", "--production", "--host", "0.0.0.0", "--port", "8003"]
 
