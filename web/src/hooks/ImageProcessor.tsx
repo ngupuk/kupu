@@ -11,6 +11,7 @@ type Context = {
   resultHistory: string[]
   lastProcessedImage?: string
   removeFromHistory: (index: number) => void
+  downloadImage: (index: number) => void
 }
 
 const ctx = createContext<Context>({
@@ -23,6 +24,7 @@ const ctx = createContext<Context>({
 
   resultHistory: [],
   removeFromHistory: () => {},
+  downloadImage: () => {},
 })
 
 const useImageProcessor = () => {
@@ -67,6 +69,15 @@ export const ImageProcessorProvider = ({
     return result
   }
 
+  const downloadImage = (index: number) => {
+    const link = document.createElement("a")
+    link.href = resultHistory[index]
+    link.download = `result-${index + 1}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <ctx.Provider
       value={{
@@ -75,6 +86,7 @@ export const ImageProcessorProvider = ({
           setImage(img)
           setProcessingImage(null)
         },
+        downloadImage,
         mask,
         setMask,
         isProcessing: processing,

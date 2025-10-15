@@ -5,8 +5,14 @@ import IconButton from "./components/IconButton"
 import useImageProcessor from "./hooks/ImageProcessor"
 
 function App() {
-  const { image, resultHistory, removeFromHistory, process, isProcessing } =
-    useImageProcessor()
+  const {
+    image,
+    resultHistory,
+    removeFromHistory,
+    process,
+    downloadImage,
+    isProcessing,
+  } = useImageProcessor()
   const [processTime, setProcessTime] = useState<number | null>(null)
 
   useEffect(() => {
@@ -67,7 +73,10 @@ function App() {
                         removeFromHistory(index)
                       }}
                     />
-                    <IconButton icon={LuDownload} />
+                    <IconButton
+                      icon={LuDownload}
+                      onClick={() => downloadImage(index)}
+                    />
                   </div>
                 </div>
               ))}
