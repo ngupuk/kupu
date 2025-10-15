@@ -9,6 +9,7 @@ type Context = {
   process: () => Promise<string>
 
   resultHistory: string[]
+  lastProcessedImage?: string
   removeFromHistory: (index: number) => void
 }
 
@@ -37,6 +38,7 @@ export const ImageProcessorProvider = ({
   const [mask, setMask] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
   const [resultHistory, setResultHistory] = useState<string[]>([])
+  const [lastProcessedImage, setProcessingImage] = useState<string | null>(null)
 
   const process = async () => {
     if (!image) return ""
@@ -61,6 +63,7 @@ export const ImageProcessorProvider = ({
 
     setResultHistory((prev) => [result, ...prev])
     setProcessing(false)
+    setProcessingImage(result)
     return result
   }
 
@@ -68,10 +71,14 @@ export const ImageProcessorProvider = ({
     <ctx.Provider
       value={{
         image,
-        setImage,
+        setImage: (img) => {
+          setImage(img)
+          setProcessingImage(null)
+        },
         mask,
         setMask,
         isProcessing: processing,
+        lastProcessedImage: lastProcessedImage || undefined,
         process,
         resultHistory,
         removeFromHistory: (index: number) => {

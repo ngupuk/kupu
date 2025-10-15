@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import {
   LuCircleHelp,
+  LuEye,
+  LuEyeClosed,
   LuFocus,
   LuLasso,
   LuRedo,
@@ -12,9 +14,15 @@ import useImageProcessor from "../hooks/ImageProcessor"
 import IconButton from "./IconButton"
 
 function Editor() {
-  const { setImage: setProcessingImage, setMask } = useImageProcessor()
+  const {
+    setImage: setProcessingImage,
+    setMask,
+    lastProcessedImage,
+  } = useImageProcessor()
+
   const ref = useRef<HTMLCanvasElement>(null)
   const [isLassoActive, setIsLassoActive] = useState(false)
+  const [showLastProcessed, setShowLastProcessed] = useState(false)
   const [image, setImage] = useState<{
     width: number
     height: number
@@ -84,7 +92,8 @@ function Editor() {
     if (!ctx) return
 
     const img = new Image()
-    img.src = image.data
+    if (showLastProcessed && lastProcessedImage) img.src = lastProcessedImage
+    else img.src = image.data
 
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -99,6 +108,7 @@ function Editor() {
       ctx.fillStyle = `rgba(0,255,0,${fillAlpha})`
       ctx.lineWidth = 2
 
+      if (showLastProcessed) return // kalau lagi liat hasil terakhir, gausah gambar lasso)
       lassos.forEach((points) => {
         if (points.length < 2) return
 
@@ -169,7 +179,11 @@ function Editor() {
       const maskData = maskCanvas.toDataURL("image/png")
       setMask(maskData)
     }
-  }, [image, transform, lassos, points])
+  }, [image, transform, lassos, points, showLastProcessed, lastProcessedImage])
+
+  useEffect(() => {
+    if (lastProcessedImage) setShowLastProcessed(true)
+  }, [lastProcessedImage])
 
   // ✅ Resize canvas ke ukuran tampilan
   useEffect(() => {
@@ -177,8 +191,8 @@ function Editor() {
     if (!canvas) return
 
     const resize = () => {
-      const oldWidth = canvas.width
-      const oldHeight = canvas.height
+      // const oldWidth = canvas.width
+      // const oldHeight = canvas.height
 
       canvas.width = canvas.clientWidth
       canvas.height = canvas.clientHeight
@@ -317,39 +331,51 @@ function Editor() {
         {/* toolbar kanan */}
       </div>
       <div className="flex flex-col gap-2 p-2 rounded-r-lg bg-gray-800">
-        <IconButton icon={LuUpload} onClick={uploadHandler} />
+        <div
+          className={`flex flex-col gap-2 ${showLastProcessed ? "hidden" : ""}`}
+        >
+          <IconButton icon={LuUpload} onClick={uploadHandler} />
+          <IconButton
+            icon={LuLasso}
+            onClick={() => {
+              isLassoActive ? setIsLassoActive(false) : setIsLassoActive(true)
+            }}
+            active={isLassoActive}
+          />
+          <IconButton icon={LuFocus} onClick={handleFocus} />
+          <IconButton
+            icon={LuUndo}
+            onClick={() => {
+              const last = lassos[lassos.length - 1]
+              if (!last) return
+              setRedoHistory((prev) => [...prev, last])
+              setLassos((prev) => prev.slice(0, prev.length - 1))
+            }}
+          />
+          <IconButton
+            icon={LuRedo}
+            aria-disabled={redoHistory.length === 0}
+            className={
+              redoHistory.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+            }
+            onClick={() => {
+              const last = redoHistory[redoHistory.length - 1]
+              if (!last) return
+              setLassos((prev) => [...prev, last])
+              setRedoHistory((prev) => prev.slice(0, prev.length - 1))
+            }}
+          />
+          <IconButton icon={LuRefreshCcw} onClick={() => setLassos([])} />
+          <IconButton icon={LuCircleHelp} />
+        </div>
         <IconButton
-          icon={LuLasso}
+          className="mt-auto"
+          icon={showLastProcessed ? LuEye : LuEyeClosed}
           onClick={() => {
-            isLassoActive ? setIsLassoActive(false) : setIsLassoActive(true)
-          }}
-          active={isLassoActive}
-        />
-        <IconButton icon={LuFocus} onClick={handleFocus} />
-        <IconButton
-          icon={LuUndo}
-          onClick={() => {
-            const last = lassos[lassos.length - 1]
-            if (!last) return
-            setRedoHistory((prev) => [...prev, last])
-            setLassos((prev) => prev.slice(0, prev.length - 1))
+            setIsLassoActive(false)
+            setShowLastProcessed((last) => !last)
           }}
         />
-        <IconButton
-          icon={LuRedo}
-          aria-disabled={redoHistory.length === 0}
-          className={
-            redoHistory.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-          }
-          onClick={() => {
-            const last = redoHistory[redoHistory.length - 1]
-            if (!last) return
-            setLassos((prev) => [...prev, last])
-            setRedoHistory((prev) => prev.slice(0, prev.length - 1))
-          }}
-        />
-        <IconButton icon={LuRefreshCcw} onClick={() => setLassos([])} />
-        <IconButton icon={LuCircleHelp} />
       </div>
       {/* overlay kalau belum ada gambar */}
       {!image.data && (
