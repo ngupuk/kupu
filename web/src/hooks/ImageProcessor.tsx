@@ -41,9 +41,24 @@ export const ImageProcessorProvider = ({
   const process = async () => {
     if (!image) return ""
     setProcessing(true)
-    // Simulasi proses dengan timeout
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    const result = image // Ganti dengan hasil proses sebenarnya
+
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8003"
+
+    const body = {
+      image,
+      mask,
+    }
+
+    const result = await fetch(`${baseUrl}/inpaint`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+      .then((res) => res.json())
+      .then((data) => data as string)
+
     setResultHistory((prev) => [result, ...prev])
     setProcessing(false)
     return result

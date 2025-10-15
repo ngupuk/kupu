@@ -5,14 +5,8 @@ import IconButton from "./components/IconButton"
 import useImageProcessor from "./hooks/ImageProcessor"
 
 function App() {
-  const {
-    image,
-    mask,
-    resultHistory,
-    removeFromHistory,
-    process,
-    isProcessing,
-  } = useImageProcessor()
+  const { image, resultHistory, removeFromHistory, process, isProcessing } =
+    useImageProcessor()
   const [processTime, setProcessTime] = useState<number | null>(null)
 
   useEffect(() => {

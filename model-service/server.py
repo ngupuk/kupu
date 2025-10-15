@@ -9,34 +9,33 @@ using the existing Inpainter model from the parent directory.
 import argparse
 import base64
 import io
-import sys
-import torch
-import numpy as np
-import uvicorn
-import traceback
-import psutil
 import os
 import shutil
 import sys
-
+import traceback
 from pathlib import Path
 from typing import Optional
+
+import numpy as np
+import psutil
+import torch
+import uvicorn
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
+from huggingface_hub import hf_hub_download
+from inpainter import Inpainter
+from loguru import logger
 from PIL import Image
 from pydantic import BaseModel
-from loguru import logger
-from huggingface_hub import hf_hub_download
-
-from inpainter import Inpainter
 
 logger.remove()
 
 # Add current directory to path to import inpainter and config
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir))
+
 
 def download_model_if_missing():
     """Download the LaMa model from Hugging Face if it doesn't exist locally"""
@@ -70,7 +69,7 @@ def download_model_if_missing():
     )
 
     # Copy from cache to our target location
-    
+
     shutil.copy2(downloaded_path, checkpoint_path)
 
     logger.info(f"✅ Model downloaded successfully to: {checkpoint_path}")
@@ -93,6 +92,8 @@ app = FastAPI(
 )
 
 # Security headers middleware
+
+
 @app.middleware("http")
 async def add_security_headers(request, call_next):
     response = await call_next(request)
@@ -107,8 +108,9 @@ async def add_security_headers(request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-            "http://localhost:3000",  # Configured frontend port
-        ],
+        "http://localhost:3000",  # Configured frontend port
+        "http://localhost:5173"
+    ],
     allow_credentials=False,  # Changed to False for security
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Accept"],  # Restricted headers
@@ -118,18 +120,24 @@ app.add_middleware(
 # Trusted host middleware for security
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0", "*"]  # Configure for your deployment
+    # Configure for your deployment
+    allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0", "*"]
 )
 
 # Inpainter will be initialized per request or globally as needed
 
 # Pydantic models for API contracts
+
+
 class InpaintRequest(BaseModel):
     image: str  # base64 encoded resized image data for processing
-    original_image: Optional[str] = None  # base64 encoded original image data for overlay
+    # base64 encoded original image data for overlay
+    original_image: Optional[str] = None
     mask: str   # base64 encoded mask data
     original_width: Optional[int] = None  # original image width for upscaling
-    original_height: Optional[int] = None  # original image height for upscaling
+    # original image height for upscaling
+    original_height: Optional[int] = None
+
 
 class SimplifiedInpaintRequest(BaseModel):
     image: str  # base64 encoded image data
@@ -141,6 +149,7 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     version: str = "1.0.0"
 
+
 class MemoryResponse(BaseModel):
     system_memory_mb: float
     system_memory_percent: float
@@ -148,6 +157,7 @@ class MemoryResponse(BaseModel):
     mps_memory_mb: Optional[float] = None
     cuda_memory_mb: Optional[float] = None
     config_max_image_size: int
+
 
 @app.get("/", include_in_schema=False)
 async def root():
@@ -159,6 +169,7 @@ async def root():
         "memory_check": "/memory"
     }
 
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint to verify server and model status"""
@@ -168,6 +179,7 @@ async def health_check():
         status="healthy",
         model_loaded=model_loaded
     )
+
 
 @app.get("/memory", response_model=MemoryResponse)
 async def memory_status():
@@ -224,11 +236,13 @@ async def inpaint(request: SimplifiedInpaintRequest):
         logger.info("Validating input data formats")
         if not request.image.startswith('data:image/'):
             logger.error("Invalid image data format")
-            raise HTTPException(status_code=400, detail="Invalid image data format")
+            raise HTTPException(
+                status_code=400, detail="Invalid image data format")
 
         if not request.mask or not request.mask.startswith('data:image/'):
             logger.error("Invalid mask data format")
-            raise HTTPException(status_code=400, detail="Invalid mask data format")
+            raise HTTPException(
+                status_code=400, detail="Invalid mask data format")
 
         # Convert base64 to PIL Images
         logger.info("Converting base64 to image data")
@@ -242,23 +256,27 @@ async def inpaint(request: SimplifiedInpaintRequest):
             logger.info("Base64 decode successful")
         except Exception as e:
             logger.error(f"Base64 decode error: {e}")
-            raise HTTPException(status_code=400, detail=f"Base64 decode error: {e}")
+            raise HTTPException(
+                status_code=400, detail=f"Base64 decode error: {e}")
 
         # Load images
         try:
             logger.info("Loading images from bytes")
             image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
             mask = Image.open(io.BytesIO(mask_bytes)).convert('L')
-            logger.info(f"Images loaded - image size: {image.size}, mask size: {mask.size}")
+            logger.info(
+                f"Images loaded - image size: {image.size}, mask size: {mask.size}")
         except Exception as e:
             logger.error(f"Image load error: {e}")
-            raise HTTPException(status_code=400, detail=f"Image load error: {e}")
+            raise HTTPException(
+                status_code=400, detail=f"Image load error: {e}")
 
         # Convert to numpy arrays
         logger.info("Converting to numpy arrays")
         image_np = np.array(image)
         mask_np = np.array(mask)
-        logger.info(f"NumPy arrays created - image shape: {image_np.shape}, mask shape: {mask_np.shape}")
+        logger.info(
+            f"NumPy arrays created - image shape: {image_np.shape}, mask shape: {mask_np.shape}")
 
         # Check if global inpainter is available
         if global_inpainter is None:
@@ -272,7 +290,8 @@ async def inpaint(request: SimplifiedInpaintRequest):
         try:
             # Use simplified inpainting method
             result = global_inpainter.inpaint(image_np, mask_np)
-            logger.info(f"Simplified inpainting completed - result shape: {result.shape}")
+            logger.info(
+                f"Simplified inpainting completed - result shape: {result.shape}")
         except Exception as e:
             logger.error(f"Error during simplified inpainting: {e}")
             raise
@@ -288,7 +307,8 @@ async def inpaint(request: SimplifiedInpaintRequest):
         buffer = io.BytesIO()
         result_image.save(buffer, format='JPEG', quality=95)
         result_b64 = base64.b64encode(buffer.getvalue()).decode()
-        logger.info(f"Result converted to base64 - size: {len(result_b64)} characters")
+        logger.info(
+            f"Result converted to base64 - size: {len(result_b64)} characters")
 
         # Return the result as base64 data URL with security headers
         logger.info("=== Simplified inpaint request completed successfully ===")
@@ -313,7 +333,9 @@ async def inpaint(request: SimplifiedInpaintRequest):
         logger.error("Full traceback:")
         logger.error(traceback.format_exc())
 
-        raise HTTPException(status_code=500, detail=f"Simplified inpainting failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Simplified inpainting failed: {str(e)}")
+
 
 def setup_static_files():
     """Setup static file serving for production mode"""
@@ -324,11 +346,13 @@ def setup_static_files():
             if hasattr(route, 'path') and route.path == '/' and hasattr(route, 'endpoint'):
                 app.routes.remove(route)
                 break
-        
-        app.mount("/", StaticFiles(directory=str(react_build_path), html=True), name="static")
+
+        app.mount("/", StaticFiles(directory=str(react_build_path),
+                  html=True), name="static")
         return True
     else:
         return False
+
 
 def run_server(host: str = None, port: int = None, production: bool = False):
     if host is None:
@@ -359,8 +383,9 @@ def run_server(host: str = None, port: int = None, production: bool = False):
         reload=False  # Set to True during development
     )
 
+
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser(description='Kupu Server')
     parser.add_argument('--host', type=str, default="0.0.0.0",
                         help=f'Host to bind the server to (default: 0.0.0.0)')
@@ -377,7 +402,8 @@ if __name__ == "__main__":
         # Check if global inpainter is available for reload mode
         if global_inpainter is None:
             logger.error("Global inpainter not available for reload mode")
-            raise RuntimeError("Failed to initialize inpainter at module level")
+            raise RuntimeError(
+                "Failed to initialize inpainter at module level")
 
         # Development mode with auto-reload
         logger.info(f"🌐 Server will bind to: {args.host}:{args.port}")
